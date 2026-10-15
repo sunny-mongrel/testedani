@@ -16,7 +16,7 @@ import { detalhesDoNivel, pontuacaoMaximaMissoes, sortearMissao, type Missao } f
 /**
  * Resultado do questionário de pegada ecológica.
  * É `null` até que o usuário responda pela primeira vez.
- * (Preenchido pela tela Resultado; lido pela Home e pela aba Pegada.)
+ * (Preenchido pela tela Resultado; lido pela Home e pela tela Pegada.)
  */
 export type ResultadoQuestionario = {
   pontuacao: number;      // Soma dos pesos das respostas (maior = pior para o planeta)

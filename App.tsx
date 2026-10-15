@@ -17,6 +17,7 @@
  *
  * FLUXO DO USUÁRIO:
  *   Onboarding -> Questionario -> Resultado -> MainApp (abas)
+ *   Cadastro abre por cima das abas (a partir da Home e de Ajustes)
  *
  * Este arquivo monta tudo que precisa envolver todas as
  * telas. A ordem dos provedores importa, porque cada um

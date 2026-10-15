@@ -4,6 +4,11 @@
  * Diferente da pilha (routes/stack.routes.tsx), aqui as telas coexistem e o
  * usuário alterna livremente entre elas pela barra inferior.
  * A barra é desenhada por CustomTabBar.tsx.
+ *
+ * "Missoes" e "Pegada" são abas registradas aqui, mas ficam escondidas da
+ * barra inferior (lista ROTAS_OCULTAS em CustomTabBar.tsx): são acessadas
+ * pelos atalhos e pelo cartão de missão da Home. Na barra aparecem Início,
+ * Yvy, Comunidade e Ajustes.
  */
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -26,7 +31,8 @@ export default function MainTabs() {
       // `props` o estado das abas, e repassamos tudo com o spread {...props}.
       tabBar={(props) => <CustomTabBar {...props} />}
     >
-      {/* A ordem aqui define a ordem dos botões na barra inferior. */}
+      {/* A ordem aqui define a ordem dos botões na barra inferior
+          (exceto Missoes e Pegada, que ficam ocultas da barra). */}
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Missoes" component={MissionsScreen} />
       <Tab.Screen name="Pegada" component={FootprintScreen} />

@@ -8,7 +8,7 @@
  * O usuário pode voltar e mudar respostas: as escolhas anteriores ficam
  * guardadas e são exibidas de novo marcadas.
  *
- * Também é aberta pela aba "Pegada" quando o usuário quer refazer o teste.
+ * Também é aberta pela tela "Pegada" quando o usuário quer refazer o teste.
  */
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';

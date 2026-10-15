@@ -1,39 +1,47 @@
 /**
  * TELA: CONFIGURAÇÕES (aba "Ajustes").
  *
- * ATENÇÃO: a tela é apenas visual. Os interruptores mudam de posição, mas
- * nada é salvo nem aplicado — não há modo escuro nem notificações
- * implementados, e os botões de "Login", "Editar cadastro", "Privacidade",
- * "Idioma" e "Termos" ainda não têm ação.
+ * Tem o cartão "Criar perfil / Login", que abre a tela de Cadastro, e a seção
+ * "Conta" com "Editar cadastro".
  *
- * Os componentes auxiliares (Secao, LinhaLink, LinhaToggle) ficam no fim deste
- * arquivo porque só esta tela os usa.
+ * ATENÇÃO: o botão "Editar cadastro" ainda não tem ação. Foram removidos desta
+ * tela os itens de notificações, modo escuro, idioma, privacidade e segurança
+ * e termos e políticas.
+ *
+ * Os componentes auxiliares (Secao, LinhaLink) ficam no fim deste arquivo
+ * porque só esta tela os usa.
  */
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { GradientHeader } from '../../components/GradientHeader';
 import { colors, gradients, radius } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
+import type { RootStackParamList } from '../../routes/routes.types';
 
 export default function SettingsScreen() {
-  // Estado local dos dois interruptores. Como só existe aqui (e não no
-  // AppContext), o valor volta ao padrão sempre que o app é reaberto.
-  const [notificacoes, setNotificacoes] = useState(true);
-  const [modoEscuro, setModoEscuro] = useState(false);
+  // Cadastro está na pilha principal (RootStackParamList), por isso o tipo da
+  // navegação é o da pilha. O navigate sobe até a pilha a partir da aba.
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
     <SafeAreaView style={styles.flex} edges={['top']}>
       <GradientHeader
         title="Configurações"
-        subtitle="Gerencie seu perfil e preferências"
+        subtitle="Gerencie seu perfil"
         colorsSet={gradients.header}
       />
 
       <ScrollView contentContainerStyle={styles.conteudo} showsVerticalScrollIndicator={false}>
-        {/* Cartão de destaque para criar perfil/login (sem ação por enquanto). */}
-        <TouchableOpacity style={styles.cartaoLogin} activeOpacity={0.9}>
+        {/* Cartão de destaque para criar perfil/login: abre a tela de Cadastro. */}
+        <TouchableOpacity
+          style={styles.cartaoLogin}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('Cadastro')}
+        >
           <View style={styles.iconeLogin}>
             <Ionicons name="person-add-outline" size={22} color={colors.white} />
           </View>
@@ -46,28 +54,6 @@ export default function SettingsScreen() {
 
         <Secao titulo="Conta">
           <LinhaLink icon="create-outline" label="Editar cadastro" />
-          <LinhaLink icon="shield-checkmark-outline" label="Privacidade e segurança" />
-        </Secao>
-
-        <Secao titulo="Preferências do app">
-          {/* `valor` e `aoAlterar` ligam o interruptor ao estado desta tela. */}
-          <LinhaToggle
-            icon="notifications-outline"
-            label="Notificações"
-            valor={notificacoes}
-            aoAlterar={setNotificacoes}
-          />
-          <LinhaToggle
-            icon="moon-outline"
-            label="Modo escuro"
-            valor={modoEscuro}
-            aoAlterar={setModoEscuro}
-          />
-          <LinhaLink icon="globe-outline" label="Idioma" traseira="Português" />
-        </Secao>
-
-        <Secao titulo="Sobre">
-          <LinhaLink icon="document-text-outline" label="Termos e políticas" />
         </Secao>
 
         <Text style={styles.versao}>Ecoara · versão 1.0.0</Text>
@@ -90,16 +76,13 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
   );
 }
 
-/** Linha clicável com ícone, rótulo e seta. `traseira` é um texto opcional
- *  alinhado à direita (ex.: o idioma atual). Ainda sem ação ao tocar. */
+/** Linha clicável com ícone, rótulo e seta. Ainda sem ação ao tocar. */
 function LinhaLink({
   icon,
   label,
-  traseira,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  traseira?: string;
 }) {
   return (
     <TouchableOpacity style={styles.linha} activeOpacity={0.8}>
@@ -107,44 +90,8 @@ function LinhaLink({
         <Ionicons name={icon} size={18} color={colors.leafDeep} />
       </View>
       <Text style={styles.linhaLabel}>{label}</Text>
-      {traseira ? <Text style={styles.linhaTraseira}>{traseira}</Text> : null}
       <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
     </TouchableOpacity>
-  );
-}
-
-/**
- * Linha com interruptor. Como não usamos o componente Switch nativo, o
- * interruptor é montado à mão: uma trilha (switchBase) com uma bolinha dentro.
- * Isso permite usar as cores do app em Android e iOS igualmente.
- */
-function LinhaToggle({
-  icon,
-  label,
-  valor,
-  aoAlterar,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  valor: boolean;
-  aoAlterar: (v: boolean) => void;
-}) {
-  return (
-    <View style={styles.linha}>
-      <View style={styles.linhaIcone}>
-        <Ionicons name={icon} size={18} color={colors.leafDeep} />
-      </View>
-      <Text style={styles.linhaLabel}>{label}</Text>
-      <TouchableOpacity
-        // Inverte o valor atual e devolve para quem controla o estado.
-        // O componente em si não guarda nada (padrão "componente controlado").
-        onPress={() => aoAlterar(!valor)}
-        style={[styles.switchBase, valor && styles.switchAtivo]}
-        activeOpacity={0.85}
-      >
-        <View style={[styles.switchBolinha, valor && styles.switchBolinhaAtiva]} />
-      </TouchableOpacity>
-    </View>
   );
 }
 
@@ -213,24 +160,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.cardForeground,
   },
-  linhaTraseira: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground },
-  switchBase: {
-    width: 46,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.muted,
-    padding: 2,
-    justifyContent: 'center',
-  },
-  switchAtivo: { backgroundColor: colors.leaf },
-  switchBolinha: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.white,
-  },
-  // Ligado: a bolinha desliza 20px para a direita.
-  switchBolinhaAtiva: { transform: [{ translateX: 20 }] },
   versao: {
     fontFamily: fonts.sans,
     fontSize: 12,

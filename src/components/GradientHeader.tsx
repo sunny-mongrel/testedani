@@ -1,6 +1,6 @@
 /*
   COMPONENTE: GradientHeader (cabeçalho com degradê).
-  Faixa colorida no topo das telas das abas (Missões, Pegada, Yvy, Comunidade
+  Faixa colorida no topo das telas principais (Missões, Pegada, Yvy, Comunidade
   e Ajustes), com título, subtítulo opcional e um ícone opcional.
   Como o cabeçalho padrão do React Navigation está desligado (headerShown:
   false), cada tela usa este componente para manter o mesmo visual.

@@ -19,9 +19,13 @@ export type RootStackParamList = {
   };
   // MainApp é o conjunto de abas inteiro (veja MainTabParamList).
   MainApp: undefined;
+  // Tela de cadastro (nome, e-mail e senha), aberta por Ajustes e pelo botão
+  // de perfil da Home. Fica na pilha, por cima das abas (sem barra inferior).
+  Cadastro: undefined;
 };
 
-/** Nomes das seis abas da parte principal do app (nenhuma recebe parâmetro). */
+/** Nomes das seis abas da parte principal do app (nenhuma recebe parâmetro).
+ *  Missoes e Pegada existem, mas não aparecem na barra inferior. */
 export type MainTabParamList = {
   Home: undefined;
   Missoes: undefined;

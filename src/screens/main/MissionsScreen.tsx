@@ -1,9 +1,11 @@
 /**
- * TELA: MISSÕES (aba "Missões").
+ * TELA: MISSÕES (não aparece na barra inferior; aberta pela Home).
  *
- * Lista as missões filtradas por dificuldade (abas Fácil / Médio / Difícil) e,
- * na quarta aba "Concluídas", todas as missões já concluídas (de qualquer
- * dificuldade). Tocar em uma missão abre um modal com os detalhes.
+ * Lista as missões filtradas por dificuldade (abas Fácil / Médio / Difícil).
+ * Logo abaixo das abas há um botão separado, "Missões concluídas", que troca a
+ * lista por todas as missões já concluídas (de qualquer dificuldade); tocar de
+ * novo nele, ou em uma aba de dificuldade, volta à lista normal.
+ * Tocar em uma missão abre um modal com os detalhes.
  * Marcar/desmarcar uma missão atualiza o estado global (AppContext), que
  * recalcula pontos e nível para o resto do app.
  *
@@ -13,6 +15,7 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { GradientHeader } from '../../components/GradientHeader';
 import { MissionCard } from '../../components/MissionCard';
 import { MissionDetailModal } from '../../components/MissionDetailModal';
@@ -27,13 +30,12 @@ import {
 } from '../../data/Missoes';
 import { useAppContext } from '../../context/AppContext';
 
-// Abas da tela: as 3 dificuldades mais a aba extra "Concluídas".
-type Aba = Dificuldade | 'concluidas';
-const abas: { id: Aba; label: string }[] = [...dificuldades, { id: 'concluidas', label: 'Concluídas' }];
-
 export default function MissionsScreen() {
-  // Aba selecionada. Começa em 'facil'.
-  const [ativa, setAtiva] = useState<Aba>('facil');
+  // Aba de dificuldade selecionada. Começa em 'facil'.
+  const [ativa, setAtiva] = useState<Dificuldade>('facil');
+
+  // Quando `true`, a lista mostra as missões concluídas em vez das da aba.
+  const [verConcluidas, setVerConcluidas] = useState(false);
 
   // Missão aberta no modal. `null` = modal fechado. Guardamos o objeto inteiro
   // (não só o id) para o modal já ter título, descrição e pontos em mãos.
@@ -44,13 +46,13 @@ export default function MissionsScreen() {
   // pontos atuais (o modal usa para avisar se a missão fará subir de nível).
   const { missoesConcluidas, alternarMissao, pontosDeImpacto } = useAppContext();
 
-  // Na aba "Concluídas" filtra todas as missões pelas que já foram feitas;
-  // nas demais pega só as da dificuldade ativa (missoesPorDificuldade é um
-  // objeto indexado por dificuldade, o que substitui um filter() na lista toda).
-  const missoes =
-    ativa === 'concluidas'
-      ? todasMissoes.filter((m) => missoesConcluidas[m.id])
-      : missoesPorDificuldade[ativa];
+  // Missões já concluídas, de qualquer dificuldade.
+  const concluidas = todasMissoes.filter((m) => missoesConcluidas[m.id]);
+
+  // No modo "concluídas" mostra a lista acima; senão pega só as da dificuldade
+  // ativa (missoesPorDificuldade é um objeto indexado por dificuldade, o que
+  // substitui um filter() na lista toda).
+  const missoes = verConcluidas ? concluidas : missoesPorDificuldade[ativa];
 
   return (
     <SafeAreaView style={styles.flex} edges={['top']}>
@@ -61,29 +63,47 @@ export default function MissionsScreen() {
       />
 
       <View style={styles.abas}>
-        {/* Abas Fácil / Médio / Difícil / Concluídas */}
-        {abas.map((d) => {
-          const isAtiva = ativa === d.id;
+        {/* Abas Fácil / Médio / Difícil. Nenhuma fica destacada enquanto a
+            lista de concluídas está aberta. */}
+        {dificuldades.map((d) => {
+          const isAtiva = !verConcluidas && ativa === d.id;
           return (
             <TouchableOpacity
               key={d.id}
-              onPress={() => setAtiva(d.id)}
+              onPress={() => {
+                setAtiva(d.id);
+                setVerConcluidas(false);
+              }}
               style={[styles.aba, isAtiva && styles.abaAtiva]}
               activeOpacity={0.85}
             >
-              {/* numberOfLines + adjustsFontSizeToFit: o texto encolhe um pouco
-                  em vez de quebrar, para as 4 abas caberem lado a lado. */}
-              <Text
-                style={[styles.abaTexto, isAtiva && styles.abaTextoAtivo]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {d.label}
-              </Text>
+              <Text style={[styles.abaTexto, isAtiva && styles.abaTextoAtivo]}>{d.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
+
+      {/* Botão separado das abas: alterna para a lista de missões concluídas e
+          mostra quantas já foram feitas. */}
+      <TouchableOpacity
+        style={[styles.botaoConcluidas, verConcluidas && styles.botaoConcluidasAtivo]}
+        onPress={() => setVerConcluidas(!verConcluidas)}
+        activeOpacity={0.85}
+      >
+        <Ionicons
+          name="checkmark-circle-outline"
+          size={20}
+          color={verConcluidas ? colors.white : colors.leafDeep}
+        />
+        <Text style={[styles.botaoConcluidasTexto, verConcluidas && styles.botaoConcluidasTextoAtivo]}>
+          {verConcluidas ? 'Voltar às missões' : 'Missões concluídas'}
+        </Text>
+        <View style={[styles.contador, verConcluidas && styles.contadorAtivo]}>
+          <Text style={[styles.contadorTexto, verConcluidas && styles.contadorTextoAtivo]}>
+            {concluidas.length}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       {/* FlatList (em vez de map dentro de um ScrollView) renderiza apenas os
           itens visíveis na tela, o que mantém a rolagem fluida em listas longas. */}
@@ -99,7 +119,7 @@ export default function MissionsScreen() {
         // concluída ainda).
         ListEmptyComponent={
           <Text style={styles.vazio}>
-            {ativa === 'concluidas'
+            {verConcluidas
               ? 'Você ainda não concluiu nenhuma missão. Conclua uma para ela aparecer aqui!'
               : 'Nenhuma missão nesta categoria.'}
           </Text>
@@ -140,7 +160,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   abas: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
     backgroundColor: colors.muted,
     borderRadius: radius.full,
     padding: 4,
@@ -150,19 +170,53 @@ const styles = StyleSheet.create({
   aba: {
     flex: 1,
     paddingVertical: 9,
-    paddingHorizontal: 2,
     borderRadius: radius.full,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   abaAtiva: { backgroundColor: colors.leaf },
   abaTexto: {
     fontFamily: fonts.sansBold,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.mutedForeground,
   },
   abaTextoAtivo: { color: colors.white },
+  // Botão "Missões concluídas": linha própria, abaixo das abas de dificuldade.
+  botaoConcluidas: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.accent,
+  },
+  botaoConcluidasAtivo: { backgroundColor: colors.leaf, borderColor: colors.leaf },
+  botaoConcluidasTexto: {
+    flex: 1,
+    fontFamily: fonts.sansBold,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.leafDeep,
+  },
+  botaoConcluidasTextoAtivo: { color: colors.white },
+  // Bolinha com a quantidade de missões concluídas.
+  contador: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    backgroundColor: colors.leaf,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contadorAtivo: { backgroundColor: colors.white },
+  contadorTexto: { fontFamily: fonts.sansBold, fontSize: 12, fontWeight: '700', color: colors.white },
+  contadorTextoAtivo: { color: colors.leafDeep },
   lista: { padding: 20, paddingBottom: 40 },
   vazio: {
     fontFamily: fonts.sans,

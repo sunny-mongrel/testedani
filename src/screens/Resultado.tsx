@@ -3,7 +3,7 @@
  *
  * Recebe a pontuação calculada em Questionario, mostra a nota e um
  * diagnóstico (quantas "Terras" seriam necessárias) e salva o resultado no
- * estado global (AppContext) para a Home e a aba Pegada exibirem depois.
+ * estado global (AppContext) para a Home e a tela Pegada exibirem depois.
  * O botão final leva o usuário para as abas do app (MainApp).
  */
 import React, { useEffect } from 'react';

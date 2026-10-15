@@ -4,9 +4,13 @@
  * Apresenta o Ecoara e explica o que é a pegada ecológica, com a mascote,
  * e leva o usuário ao questionário pelo botão "COMEÇAR".
  * Não tem estado nem lógica, só conteúdo e navegação.
+ *
+ * A tela NÃO rola: tudo cabe na altura do aparelho. O planeta e a mascote
+ * têm tamanho proporcional à altura da tela, e a mascote fica ao lado do
+ * planeta (e não embaixo do balão) para economizar espaço vertical.
  */
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,20 +25,55 @@ import { PrimaryButton } from '../components/PrimaryButton';
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 export default function Onboarding({ navigation }: Props) {
+  // Altura da tela: planeta e mascote encolhem em aparelhos baixos (planeta
+  // entre 84 e 150 px; mascote com 85% do tamanho do planeta), garantindo
+  // que tudo caiba sem rolar.
+  const { height: alturaTela } = useWindowDimensions();
+  const tamanhoTerra = Math.max(84, Math.min(150, Math.round(alturaTela * 0.15)));
+  const tamanhoMascote = Math.round(tamanhoTerra * 0.85);
+
   return (
     // O `as unknown as [...]` é so um ajuste de tipagem: o LinearGradient
     // exige uma tupla com pelo menos duas cores, e nosso array vem marcado
     // como somente-leitura (as const). Não muda nada em tempo de execução.
     <LinearGradient colors={gradients.hero as unknown as [string, string, ...string[]]} style={styles.flex}>
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* View comum (sem ScrollView): o conteúdo ocupa a tela inteira. */}
+        <View style={styles.conteudo}>
           <Text style={styles.marca}>Ecoara</Text>
           <Text style={styles.titulo}>Sua jornada rumo a um planeta mais sustentável</Text>
 
-          {/* Área de destaque: planeta, balão de fala e mascote sobrepostos. */}
+          {/* Área de destaque: planeta, mascote e balão de fala. flex: 1 faz
+              esta área ocupar o espaço que sobra entre o título e o cartão. */}
           <View style={styles.heroArea}>
-            <View style={styles.terraCirculo}>
-              <Ionicons name="earth" size={92} color={colors.white} />
+            {/* Linha do planeta: o planeta fica no centro e a mascote é
+                posicionada (position: absolute) ao lado dele, na direita,
+                com a base alinhada à base do planeta. */}
+            <View style={styles.terraLinha}>
+              <View
+                style={[
+                  styles.terraCirculo,
+                  { width: tamanhoTerra, height: tamanhoTerra, borderRadius: tamanhoTerra / 2 },
+                ]}
+              >
+                <Ionicons name="earth" size={Math.round(tamanhoTerra * 0.55)} color={colors.white} />
+              </View>
+
+              {/* Imagem da mascote, recortada em círculo pelo estilo do wrapper.
+                  accessibilityLabel é lido por leitores de tela */}
+              <View
+                style={[
+                  styles.mascoteWrapper,
+                  { width: tamanhoMascote, height: tamanhoMascote, borderRadius: tamanhoMascote / 2 },
+                ]}
+              >
+                <Image
+                  source={require('../../assets/yvy-mascot.png')}
+                  accessibilityLabel="Yvy, a ararinha-azul mascote do Ecoara, acenando"
+                  style={styles.mascoteImagem}
+                  resizeMode="cover"
+                />
+              </View>
             </View>
 
             {/* Balão de fala da Yvy explicando o que é a pegada ecológica. */}
@@ -46,17 +85,6 @@ export default function Onboarding({ navigation }: Props) {
                 menor o impacto ambiental da sua rotina.
               </Text>
               <View style={styles.balaoRabicho} />
-            </View>
-
-            {/* Imagem da mascote, recortada em círculo pelo estilo do wrapper.
-                accessibilityLabel é lido por leitores de tela */}
-            <View style={styles.mascoteWrapper}>
-              <Image
-                source={require('../../assets/yvy-mascot.png')}
-                accessibilityLabel="Yvy, a ararinha-azul mascote do Ecoara, acenando"
-                style={styles.mascoteImagem}
-                resizeMode="cover"
-              />
             </View>
           </View>
 
@@ -78,7 +106,7 @@ export default function Onboarding({ navigation }: Props) {
               style={styles.botao}
             />
           </View>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -88,7 +116,7 @@ export default function Onboarding({ navigation }: Props) {
 // StyleSheet.create apenas valida e otimiza os objetos de estilo.
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { flexGrow: 1, paddingBottom: 24 },
+  conteudo: { flex: 1, paddingBottom: 12 },
   marca: {
     fontFamily: fonts.displayExtraBold,
     fontSize: 16,
@@ -97,7 +125,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: 8,
   },
   titulo: {
     fontFamily: fonts.display,
@@ -109,16 +137,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     lineHeight: 28,
   },
+  // flex: 1 + justifyContent: 'center' centraliza o planeta e o balão no
+  // espaço livre entre o título e o cartão.
   heroArea: {
-    marginTop: 28,
-    marginBottom: 8,
+    flex: 1,
+    marginTop: 8,
     paddingHorizontal: 24,
     alignItems: 'center',
+    justifyContent: 'center',
   },
+  // Linha que ocupa toda a largura; a mascote é absoluta em relação a ela.
+  terraLinha: { alignSelf: 'stretch', alignItems: 'center' },
+  // Largura, altura e raio do planeta são definidos no JSX (proporcionais à tela).
   terraCirculo: {
-    width: 168,
-    height: 168,
-    borderRadius: 84,
     backgroundColor: 'rgba(255,255,255,0.18)',
     borderWidth: 3,
     borderColor: 'rgba(255,255,255,0.4)',
@@ -126,13 +157,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   balao: {
-    alignSelf: 'flex-start',
-    marginTop: -18,
-    marginLeft: 4,
-    maxWidth: '86%',
+    // marginTop positivo deixa espaço para o rabicho (que aponta para a mascote).
+    marginTop: 14,
+    alignSelf: 'center',
+    maxWidth: '100%',
     backgroundColor: colors.white,
     borderRadius: radius.xl,
-    padding: 16,
+    padding: 12,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -153,23 +184,23 @@ const styles = StyleSheet.create({
     color: colors.cardForeground,
   },
   // "Rabicho" do balão de fala: um quadrado branco girado 45 graus e
-  // posicionado meio para fora da caixa, formando a pontinha triangular.
+  // posicionado meio para fora da caixa (em cima, apontando para a mascote),
+  // formando a pontinha triangular.
   balaoRabicho: {
     position: 'absolute',
-    bottom: -9,
-    right: 36,
+    top: -9,
+    right: 40,
     width: 18,
     height: 18,
     backgroundColor: colors.white,
     transform: [{ rotate: '45deg' }],
   },
+  // Posição: colada na direita e na base da linha do planeta; o tamanho é
+  // definido no JSX.
   mascoteWrapper: {
-    alignSelf: 'flex-end',
-    marginTop: -12,
-    marginRight: 12,
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
     borderWidth: 4,
     borderColor: 'rgba(255,255,255,0.6)',
     overflow: 'hidden',
@@ -177,25 +208,25 @@ const styles = StyleSheet.create({
   },
   mascoteImagem: { width: '100%', height: '100%' },
   cartao: {
-    marginTop: 20,
+    marginTop: 8,
     marginHorizontal: 20,
     backgroundColor: colors.background,
     borderRadius: radius.xxl,
-    padding: 24,
+    padding: 18,
   },
   cartaoTitulo: {
     fontFamily: fonts.display,
     fontSize: 18,
     fontWeight: '700',
     color: colors.leafDeep,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   paragrafo: {
     fontFamily: fonts.sans,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.cardForeground,
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  botao: { marginTop: 12 },
+  botao: { marginTop: 6 },
 });

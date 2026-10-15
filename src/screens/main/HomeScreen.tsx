@@ -2,10 +2,12 @@
  * TELA: HOME (aba "Início").
  *
  * Primeira aba do app. Mostra:
- *  - um topo em degradê com saudação e um ícone de folha;
+ *  - um topo em degradê com saudação e um ícone de folha, além do botão de
+ *    perfil (canto superior direito), que abre a tela de Cadastro;
  *  - o cartão "Missão diária": uma missão sorteada a cada abertura do app
- *    (leva à aba Missões);
- *  - uma grade com atalhos e o anel de nível do usuário, com o texto
+ *    (leva à tela Missões);
+ *  - uma grade com atalhos (Missões e Pegada ecológica, que não aparecem na
+ *    barra inferior) e o anel de nível do usuário, com o texto
  *    "X / Y XP" (XP já juntado no nível / XP necessário para subir).
  *
  * A tela NÃO rola: tudo cabe na altura do aparelho. O topo em degradê ocupa
@@ -20,15 +22,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, gradients, radius } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { LevelRing } from '../../components/LevelRing';
 import { ActionTile } from '../../components/ActionTile';
 import { useAppContext } from '../../context/AppContext';
-import type { MainTabParamList } from '../../routes/routes.types';
+import type { MainTabParamList, RootStackParamList } from '../../routes/routes.types';
 
-// Tipo do objeto `navigation` desta tela: navegação entre as abas.
-type Nav = BottomTabNavigationProp<MainTabParamList>;
+// Tipo do objeto `navigation` desta tela: navegação entre as abas, combinada
+// com a da pilha principal (necessária para abrir a tela Cadastro).
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export default function HomeScreen() {
   // useNavigation em vez de receber `navigation` por prop: como esta tela é
@@ -56,13 +64,18 @@ export default function HomeScreen() {
       {/* flex: 1 faz o degradê ocupar toda a altura que sobra acima do corpo. */}
       <LinearGradient colors={gradients.hero as unknown as [string, string, ...string[]]} style={styles.hero}>
         <SafeAreaView edges={['top']} style={styles.heroConteudo}>
-          {/* Botões do topo (menu e perfil). Ainda são apenas visuais: não
-              têm onPress, então tocar neles não faz nada por enquanto. */}
+          {/* Botões do topo. O de menu ainda é apenas visual (sem onPress);
+              o de perfil abre a tela de Cadastro. */}
           <View style={styles.headerRow}>
             <TouchableOpacity style={styles.headerButton} activeOpacity={0.8}>
               <Ionicons name="menu-outline" size={20} color={colors.white} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.headerButton} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('Cadastro')}
+              accessibilityLabel="Abrir cadastro"
+            >
               <Ionicons name="person-circle-outline" size={20} color={colors.white} />
             </TouchableOpacity>
           </View>
@@ -95,7 +108,7 @@ export default function HomeScreen() {
       </LinearGradient>
 
       <View style={styles.corpo}>
-        {/* Cartão "Missão diária": ao tocar, abre a aba Missões. */}
+        {/* Cartão "Missão diária": ao tocar, abre a tela Missões. */}
         <TouchableOpacity
           style={styles.missaoDiaria}
           activeOpacity={0.9}

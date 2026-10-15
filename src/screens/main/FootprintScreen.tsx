@@ -1,5 +1,5 @@
 /**
- * TELA: PEGADA ECOLÓGICA (aba "Pegada").
+ * TELA: PEGADA ECOLÓGICA (não aparece na barra inferior; aberta pela Home).
  *
  * Mostra o último resultado do questionário (pontuação e classificação) ou,
  * se o usuário ainda não respondeu, um convite para fazê-lo. Nos dois casos

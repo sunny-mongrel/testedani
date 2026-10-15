@@ -7,6 +7,10 @@
  *
  * Para adicionar uma aba nova: cadastre a rota em MainTabs.tsx e inclua o
  * ícone em ICONS e o rótulo em LABELS abaixo.
+ *
+ * As rotas "Missoes" e "Pegada" continuam cadastradas em MainTabs.tsx (a Home
+ * navega até elas pelos atalhos), mas NÃO aparecem como botões na barra:
+ * veja ROTAS_OCULTAS abaixo.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,6 +19,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, radius } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+
+// Rotas que existem na navegação mas não ganham botão na barra inferior.
+// Para voltar a mostrar uma delas, basta tirar o nome desta lista.
+const ROTAS_OCULTAS = ['Missoes', 'Pegada'];
 
 // Mapeia o nome da rota para o ícone. `lib` indica de qual pacote de ícones
 // ele vem, já que "bird" só existe no MaterialCommunityIcons.
@@ -51,6 +59,9 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 6) }]}>
       {/* Percorre as rotas cadastradas em MainTabs e desenha um botão para cada. */}
       {state.routes.map((route, index) => {
+        // Rotas ocultas não desenham botão (mas continuam navegáveis).
+        if (ROTAS_OCULTAS.includes(route.name)) return null;
+
         // state.index guarda a posição da aba ativa. Comparando com o índice
         // desta aba descobrimos se ela é a selecionada.
         const isActive = state.index === index;
