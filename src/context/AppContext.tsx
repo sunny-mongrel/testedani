@@ -3,14 +3,15 @@
  * O Context permite que qualquer tela leia e altere dados compartilhados sem
  * precisar passá-los de componente em componente (props). Estao aqui:
  * - o resultado do questionário de pegada ecológica;
- * - as missões concluídas e, a partir delas, os pontos de impacto e o nível.
+ * - as missões concluídas e, a partir delas, os pontos de impacto (XP) e o nível;
+ * - a "missão diária", sorteada uma vez a cada abertura do app.
  *
  * Como usar em uma tela:  const { nivel, pontosDeImpacto } = useAppContext();
  * obs: os dados ficam apenas na memória. Ao fechar o app, tudo é
  * perdido (não há salvamento em disco nem servidor ainda/sem bd).
  */
 import React, { createContext, useContext, useMemo, useState } from 'react';
-import { calcularNivel, pontuacaoMaximaMissoes, progressoDoNivel } from '../data/Missoes';
+import { detalhesDoNivel, pontuacaoMaximaMissoes, sortearMissao, type Missao } from '../data/Missoes';
 
 /**
  * Resultado do questionário de pegada ecológica.
@@ -35,6 +36,11 @@ type AppContextValue = {
   pontosDeImpacto: number;  // Soma total de pontos das missões concluídas
   nivel: number;            // Nível (1 a 20) calculado a partir da pontuação total
   progressoNivel: number;   // Percentual (0 a 1) para o próximo nível
+  xpNoNivel: number;        // XP já juntado dentro do nível atual (o "X" de "X de Y")
+  xpNecessario: number;     // XP que o nível atual exige para subir (o "Y"); 0 no nível máximo
+
+  /** Missão sorteada ao abrir o app, exibida como "Missão diária" na Home */
+  missaoDoDia: Missao;
 };
 
 // Criação do contexto. O valor inicial `undefined` permite detectar, em
@@ -95,10 +101,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [pontosPorMissao],
   );
 
-  // Nível (1 a 20) e progresso dentro do nível: 20 níveis distribuídos em
-  // 1700 pontos (85 pontos por nível). Regras em data/Missoes.ts.
-  const nivel = calcularNivel(pontosDeImpacto);
-  const progressoNivel = progressoDoNivel(pontosDeImpacto);
+  // Missão diária: sorteada UMA vez quando o Provider é criado (ou seja, a
+  // cada vez que o app é aberto). A função passada ao useState só roda na
+  // primeira renderização, então a missão não muda ao trocar de aba ou ao
+  // concluir missões; só muda na próxima abertura do app.
+  const [missaoDoDia] = useState<Missao>(() => sortearMissao());
+
+  // Nível (1 a 20) e progresso dentro do nível. Cada nível exige mais XP que o
+  // anterior (40, 45, 50, ... XP); as regras estão em data/Missoes.ts.
+  const { nivel, progresso: progressoNivel, xpAtual: xpNoNivel, xpNecessario } =
+    detalhesDoNivel(pontosDeImpacto);
 
   // Objeto exposto pelo Provider: é o que as telas recebem em useAppContext().
   const value: AppContextValue = {
@@ -109,6 +121,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     pontosDeImpacto,
     nivel,
     progressoNivel,
+    xpNoNivel,
+    xpNecessario,
+    missaoDoDia,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

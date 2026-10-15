@@ -2,12 +2,14 @@
  * DADOS: MISSÕES E SISTEMA DE NÍVEIS.
  * Esse arquivo possui:
  *  1. o formato de uma missão (tipo `Missao`);
- *  2. as regras de pontos e níveis (calcularNivel, progressoDoNivel);
+ *  2. as regras de pontos (XP) e níveis, com peso crescente por nível
+ *     (xpParaProximoNivel, calcularNivel, progressoDoNivel, detalhesDoNivel);
  *  3. a lista das 34 missões, divididas em fácil (9), médio (16) e difícil (9);
- *  4. funções auxiliares para buscar/escolher missões.
+ *  4. funções auxiliares para buscar/sortear missões (sortearMissao).
  *
- * Quem usa: AppContext (calcula nível), tela Missões (lista por dificuldade),
- * MissionDetailModal (prevê subida de nível) e Home (nível e progresso).
+ * Quem usa: AppContext (calcula nível e sorteia a missão diária), tela Missões
+ * (lista por dificuldade e lista de concluídas), MissionDetailModal (prevê
+ * subida de nível) e Home (nível, XP do nível e missão diária).
  *
  * Para criar uma missão nova: acrescente um objeto em `facil`, `medio` ou
  * `dificil`, com `id` ÚNICO (f = fácil, m = médio, d = difícil). O ícone é
@@ -35,35 +37,77 @@ export const dificuldades: { id: Dificuldade; label: string }[] = [
   { id: 'dificil', label: 'Difícil' },
 ];
 
-// Sistema de níveis: 20 níveis distribuídos igualmente ao longo de 1700
-// pontos de impacto (85 pontos por nível). Esses valores são usados pelo
-// AppContext para calcular o nível atual do usuário conforme ele conclui
-// missões.
+// Sistema de níveis com PESO CRESCENTE (XP = pontos de impacto).
+// Cada nível exige mais XP que o anterior: subir do nível 1 para o 2 custa
+// XP_PRIMEIRO_NIVEL (40) e, a cada nível seguinte, o custo aumenta em
+// XP_INCREMENTO_POR_NIVEL (5):
+//   nível 1 -> 2: 40 XP | 2 -> 3: 45 XP | 3 -> 4: 50 XP | ... | 19 -> 20: 130 XP
+// Para chegar ao nível 20 são necessários 1615 XP no total (XP_NIVEL_MAXIMO);
+// as 34 missões somam 1675 pontos, então o nível máximo é alcançável.
 export const NIVEL_MAXIMO = 20;
-export const PONTOS_TOTAIS_NIVELACAO = 1700;
-export const PONTOS_POR_NIVEL = PONTOS_TOTAIS_NIVELACAO / NIVEL_MAXIMO;
+export const XP_PRIMEIRO_NIVEL = 40;
+export const XP_INCREMENTO_POR_NIVEL = 5;
+
+/** XP que o usuário precisa juntar DENTRO do nível `nivel` para passar ao seguinte. */
+export function xpParaProximoNivel(nivel: number): number {
+  return XP_PRIMEIRO_NIVEL + (nivel - 1) * XP_INCREMENTO_POR_NIVEL;
+}
+
+/**
+ * XP total acumulado necessário para ENTRAR no nível `nivel`.
+ * É a soma dos custos dos níveis anteriores (progressão aritmética):
+ * nível 1 = 0, nível 2 = 40, nível 3 = 85, ..., nível 20 = 1615.
+ */
+export function xpAcumuladoDoNivel(nivel: number): number {
+  const passos = nivel - 1; // quantas subidas já foram feitas
+  return passos * XP_PRIMEIRO_NIVEL + (XP_INCREMENTO_POR_NIVEL * passos * (passos - 1)) / 2;
+}
+
+// XP total para atingir o nível máximo.
+export const XP_NIVEL_MAXIMO = xpAcumuladoDoNivel(NIVEL_MAXIMO);
 
 /**
  * Nível atual a partir dos pontos de impacto (1 a 20).
- * Nível 1 = 0 pts, nível 2 = 85 pts, ..., nível 20 = 1615 pts (19 x 85).
- * Os pontos das 34 missões somam 1675, nível 20 é alcançável.
+ * Percorre os níveis do primeiro ao último e para no último cujo XP de
+ * entrada já foi alcançado (ex.: 84 pts ainda é nível 2; 85 pts é nível 3).
  */
-//ERRO DE CALCULO EXATO NESSA PARTE, NECESSARIO ORGANIZAR MELHOR AINDA
 export function calcularNivel(pontos: number): number {
-  // Math.max(0, ...) impede pontos negativos; Math.floor arredonda para baixo
-  // (84 pts ainda é nível 1); o "+ 1" faz a contagem começar no nível 1;
-  // Math.min limita ao nível máximo.
-  const nivel = Math.floor(Math.max(0, pontos) / PONTOS_POR_NIVEL) + 1;
-  return Math.min(NIVEL_MAXIMO, nivel);
+  const total = Math.max(0, pontos); // impede pontos negativos
+  let nivel = 1;
+  while (nivel < NIVEL_MAXIMO && total >= xpAcumuladoDoNivel(nivel + 1)) {
+    nivel += 1;
+  }
+  return nivel;
+}
+
+/**
+ * Detalhes do progresso dentro do nível atual, para exibir "X de Y XP":
+ *  - xpAtual: XP já juntado dentro do nível (ex.: 12);
+ *  - xpNecessario: XP total pedido por este nível (ex.: 45);
+ *  - progresso: fração de 0 a 1 (xpAtual / xpNecessario).
+ * No nível máximo não há próximo nível: xpNecessario = 0 e progresso = 1.
+ */
+export function detalhesDoNivel(pontos: number): {
+  nivel: number;
+  xpAtual: number;
+  xpNecessario: number;
+  progresso: number;
+} {
+  const total = Math.max(0, pontos);
+  const nivel = calcularNivel(total);
+  if (nivel >= NIVEL_MAXIMO) {
+    return { nivel, xpAtual: 0, xpNecessario: 0, progresso: 1 };
+  }
+  const xpNecessario = xpParaProximoNivel(nivel);
+  const xpAtual = total - xpAcumuladoDoNivel(nivel);
+  return { nivel, xpAtual, xpNecessario, progresso: xpAtual / xpNecessario };
 }
 
 /*
  * Progresso (0 a 1) dentro do nível atual. No nível máximo, a barra fica cheia.
  */
 export function progressoDoNivel(pontos: number): number {
-  if (calcularNivel(pontos) >= NIVEL_MAXIMO) return 1;
-  // O operador % (resto da divisão) dá quantos pontos "sobraram" no nível atual.
-  return (Math.max(0, pontos) % PONTOS_POR_NIVEL) / PONTOS_POR_NIVEL;
+  return detalhesDoNivel(pontos).progresso;
 }
 
 // Ciclo de ícones (Ionicons) usado para variar o visual dos cartões de
@@ -575,30 +619,16 @@ export function dificuldadeDoNivel(nivel: number): Dificuldade {
 }
 
 /**
- * Escolhe a "missão diária": sempre uma missão da dificuldade compatível com o
- * nível do usuário, dando preferência a uma missão que ele ainda não concluiu.
- * A escolha muda a cada dia (mas continua igual durante o mesmo dia).
- *
- * ERRO NESSA PARTE
+ * Sorteia a "missão diária" entre as missões disponíveis (ainda não
+ * concluídas). Se todas já foram concluídas, sorteia entre todas.
+ * Cada chamada pode devolver uma missão diferente; o AppContext chama esta
+ * função uma única vez a cada abertura do app, então a missão fica fixa
+ * enquanto o app estiver aberto e muda na próxima abertura.
  */
-export function obterMissaoDoDia(
-  nivel: number,
-  missoesConcluidas: Record<string, boolean>,
-): Missao {
-  const dificuldade = dificuldadeDoNivel(nivel);
-  const pool = missoesPorDificuldade[dificuldade];
-
-  // Número do dia dentro do ano (1 a 366): diferença entre agora e 31/dez do
-  // ano anterior, em milissegundos, dividida pelos ms de um dia (86 400 000).
-  const diaDoAno = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000,
-  );
-
-  // Prefere as pendentes; se o usuário já fez todas dessa dificuldade, usa a lista completa.
-  const pendentes = pool.filter((m) => !missoesConcluidas[m.id]);
-  const listaParaEscolher = pendentes.length > 0 ? pendentes : pool;
-
-  // O resto da divisão faz o índice "girar" pela lista, um item por dia.
-  const indice = diaDoAno % listaParaEscolher.length;
-  return listaParaEscolher[indice];
+export function sortearMissao(missoesConcluidas: Record<string, boolean> = {}): Missao {
+  const disponiveis = todasMissoes.filter((m) => !missoesConcluidas[m.id]);
+  const lista = disponiveis.length > 0 ? disponiveis : todasMissoes;
+  // Math.random() dá um número de 0 a 1 (exclusivo); multiplicar pelo tamanho
+  // da lista e arredondar para baixo resulta em um índice válido.
+  return lista[Math.floor(Math.random() * lista.length)];
 }

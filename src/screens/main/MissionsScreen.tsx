@@ -1,8 +1,9 @@
 /**
  * TELA: MISSÕES (aba "Missões").
  *
- * Lista as missões filtradas por dificuldade (abas Fácil / Médio / Difícil)
- * e abre um modal com os detalhes quando o usuário toca em uma delas.
+ * Lista as missões filtradas por dificuldade (abas Fácil / Médio / Difícil) e,
+ * na quarta aba "Concluídas", todas as missões já concluídas (de qualquer
+ * dificuldade). Tocar em uma missão abre um modal com os detalhes.
  * Marcar/desmarcar uma missão atualiza o estado global (AppContext), que
  * recalcula pontos e nível para o resto do app.
  *
@@ -17,12 +18,22 @@ import { MissionCard } from '../../components/MissionCard';
 import { MissionDetailModal } from '../../components/MissionDetailModal';
 import { colors, gradients, radius } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
-import { dificuldades, missoesPorDificuldade, type Dificuldade, type Missao } from '../../data/Missoes';
+import {
+  dificuldades,
+  missoesPorDificuldade,
+  todasMissoes,
+  type Dificuldade,
+  type Missao,
+} from '../../data/Missoes';
 import { useAppContext } from '../../context/AppContext';
 
+// Abas da tela: as 3 dificuldades mais a aba extra "Concluídas".
+type Aba = Dificuldade | 'concluidas';
+const abas: { id: Aba; label: string }[] = [...dificuldades, { id: 'concluidas', label: 'Concluídas' }];
+
 export default function MissionsScreen() {
-  // Aba de dificuldade selecionada. Começa em 'facil'.
-  const [ativa, setAtiva] = useState<Dificuldade>('facil');
+  // Aba selecionada. Começa em 'facil'.
+  const [ativa, setAtiva] = useState<Aba>('facil');
 
   // Missão aberta no modal. `null` = modal fechado. Guardamos o objeto inteiro
   // (não só o id) para o modal já ter título, descrição e pontos em mãos.
@@ -33,9 +44,13 @@ export default function MissionsScreen() {
   // pontos atuais (o modal usa para avisar se a missão fará subir de nível).
   const { missoesConcluidas, alternarMissao, pontosDeImpacto } = useAppContext();
 
-  // Pega só as missões da dificuldade ativa. Como missoesPorDificuldade é um
-  // objeto indexado por dificuldade, isso substitui um filter() na lista toda.
-  const missoes = missoesPorDificuldade[ativa];
+  // Na aba "Concluídas" filtra todas as missões pelas que já foram feitas;
+  // nas demais pega só as da dificuldade ativa (missoesPorDificuldade é um
+  // objeto indexado por dificuldade, o que substitui um filter() na lista toda).
+  const missoes =
+    ativa === 'concluidas'
+      ? todasMissoes.filter((m) => missoesConcluidas[m.id])
+      : missoesPorDificuldade[ativa];
 
   return (
     <SafeAreaView style={styles.flex} edges={['top']}>
@@ -46,8 +61,8 @@ export default function MissionsScreen() {
       />
 
       <View style={styles.abas}>
-        {/* Abas Fácil / Médio / Difícil */}
-        {dificuldades.map((d) => {
+        {/* Abas Fácil / Médio / Difícil / Concluídas */}
+        {abas.map((d) => {
           const isAtiva = ativa === d.id;
           return (
             <TouchableOpacity
@@ -56,7 +71,15 @@ export default function MissionsScreen() {
               style={[styles.aba, isAtiva && styles.abaAtiva]}
               activeOpacity={0.85}
             >
-              <Text style={[styles.abaTexto, isAtiva && styles.abaTextoAtivo]}>{d.label}</Text>
+              {/* numberOfLines + adjustsFontSizeToFit: o texto encolhe um pouco
+                  em vez de quebrar, para as 4 abas caberem lado a lado. */}
+              <Text
+                style={[styles.abaTexto, isAtiva && styles.abaTextoAtivo]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {d.label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -72,6 +95,15 @@ export default function MissionsScreen() {
         contentContainerStyle={styles.lista}
         // Espaçador desenhado ENTRE os itens (não antes do primeiro nem depois do último).
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        // Mensagem exibida quando a lista está vazia (ex.: nenhuma missão
+        // concluída ainda).
+        ListEmptyComponent={
+          <Text style={styles.vazio}>
+            {ativa === 'concluidas'
+              ? 'Você ainda não concluiu nenhuma missão. Conclua uma para ela aparecer aqui!'
+              : 'Nenhuma missão nesta categoria.'}
+          </Text>
+        }
         renderItem={({ item }) => (
           <MissionCard
             missao={item}
@@ -108,7 +140,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   abas: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 4,
     backgroundColor: colors.muted,
     borderRadius: radius.full,
     padding: 4,
@@ -118,16 +150,27 @@ const styles = StyleSheet.create({
   aba: {
     flex: 1,
     paddingVertical: 9,
+    paddingHorizontal: 2,
     borderRadius: radius.full,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   abaAtiva: { backgroundColor: colors.leaf },
   abaTexto: {
     fontFamily: fonts.sansBold,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.mutedForeground,
   },
   abaTextoAtivo: { color: colors.white },
   lista: { padding: 20, paddingBottom: 40 },
+  vazio: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+    marginTop: 24,
+    paddingHorizontal: 12,
+  },
 });
