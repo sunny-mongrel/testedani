@@ -20,7 +20,7 @@ import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'r
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -64,10 +64,15 @@ export default function HomeScreen() {
       {/* flex: 1 faz o degradê ocupar toda a altura que sobra acima do corpo. */}
       <LinearGradient colors={gradients.hero as unknown as [string, string, ...string[]]} style={styles.hero}>
         <SafeAreaView edges={['top']} style={styles.heroConteudo}>
-          {/* Botões do topo. O de menu ainda é apenas visual (sem onPress);
-              o de perfil abre a tela de Cadastro. */}
+          {/* O menu abre o Drawer; o botão de perfil abre a tela de Cadastro. */}
           <View style={styles.headerRow}>
-            <TouchableOpacity style={styles.headerButton} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir menu"
+              onPress={() => navigation.getParent()?.dispatch(DrawerActions.openDrawer())}
+            >
               <Ionicons name="menu-outline" size={20} color={colors.white} />
             </TouchableOpacity>
             <TouchableOpacity

@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
 /*
  * TIPOS DAS ROTAS
  * Cada chave é o nome de uma tela e o valor descreve os parâmetros que ela
@@ -24,8 +26,14 @@ export type RootStackParamList = {
   Cadastro: undefined;
 };
 
-/** Nomes das seis abas da parte principal do app (nenhuma recebe parâmetro).
- *  Missoes e Pegada existem, mas não aparecem na barra inferior. */
+/** Rotas acessíveis pelo menu lateral da área principal. */
+export type MainDrawerParamList = {
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
+  Educacional: undefined;
+  SobreNos: undefined;
+};
+
+/** Rotas internas das abas; Missoes e Pegada não aparecem na barra inferior. */
 export type MainTabParamList = {
   Home: undefined;
   Missoes: undefined;
