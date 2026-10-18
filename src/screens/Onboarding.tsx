@@ -10,7 +10,7 @@
  * planeta (e não embaixo do balão) para economizar espaço vertical.
  */
 import React from 'react';
-import { Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,12 +19,16 @@ import { RootStackParamList } from '../routes/routes.types';
 import { colors, gradients, radius } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { useAppContext } from '../context/AppContext';
 
 // Tipo das props que o React Navigation entrega a esta tela (`navigation` e
 // `route`), já conferido com a lista de rotas de routes.types.ts.
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 export default function Onboarding({ navigation }: Props) {
+  // Quem já está logada não precisa do atalho "Já tenho conta".
+  const { usuario } = useAppContext();
+
   // Altura da tela: planeta e mascote encolhem em aparelhos baixos (planeta
   // entre 84 e 150 px; mascote com 85% do tamanho do planeta), garantindo
   // que tudo caiba sem rolar.
@@ -105,6 +109,18 @@ export default function Onboarding({ navigation }: Props) {
               onPress={() => navigation.navigate('Questionario')}
               style={styles.botao}
             />
+
+            {/* Quem já tem conta entra por aqui e recupera a pontuação salva,
+                sem refazer o questionário. */}
+            {!usuario && (
+              <TouchableOpacity
+                style={styles.jaTenhoConta}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('Cadastro', { origem: 'onboarding' })}
+              >
+                <Text style={styles.jaTenhoContaTexto}>Já tenho conta? Entrar</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -229,4 +245,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   botao: { marginTop: 6 },
+  jaTenhoConta: { marginTop: 8, alignItems: 'center', paddingVertical: 4 },
+  jaTenhoContaTexto: { fontFamily: fonts.sansBold, fontSize: 14, fontWeight: '700', color: colors.leafDeep },
 });

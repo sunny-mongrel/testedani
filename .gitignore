@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Supabase (chaves locais)
+.env
+.env.local

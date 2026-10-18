@@ -23,7 +23,9 @@ export type RootStackParamList = {
   MainApp: undefined;
   // Tela de cadastro (nome, e-mail e senha), aberta por Ajustes e pelo botão
   // de perfil da Home. Fica na pilha, por cima das abas (sem barra inferior).
-  Cadastro: undefined;
+  // origem: 'onboarding' quando aberta pelo "Já tenho conta" da tela de boas-vindas
+  // (abre direto em "Entrar" e, ao terminar, segue para o app ou o questionário).
+  Cadastro: { origem?: 'onboarding' } | undefined;
 };
 
 /** Rotas acessíveis pelo menu lateral da área principal. */

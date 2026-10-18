@@ -21,11 +21,13 @@ import { GradientHeader } from '../../components/GradientHeader';
 import { colors, gradients, radius } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import type { RootStackParamList } from '../../routes/routes.types';
+import { useAppContext } from '../../context/AppContext';
 
 export default function SettingsScreen() {
   // Cadastro está na pilha principal (RootStackParamList), por isso o tipo da
   // navegação é o da pilha. O navigate sobe até a pilha a partir da aba.
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { usuario } = useAppContext();
 
   return (
     <SafeAreaView style={styles.flex} edges={['top']}>
@@ -46,8 +48,12 @@ export default function SettingsScreen() {
             <Ionicons name="person-add-outline" size={22} color={colors.white} />
           </View>
           <View style={styles.textoLogin}>
-            <Text style={styles.loginTitulo}>Criar perfil / Login</Text>
-            <Text style={styles.loginSubtitulo}>Salve seu progresso e conquistas</Text>
+            <Text style={styles.loginTitulo}>
+              {usuario ? usuario.nome || 'Minha conta' : 'Criar perfil / Login'}
+            </Text>
+            <Text style={styles.loginSubtitulo}>
+              {usuario ? usuario.email : 'Salve seu progresso e conquistas'}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.white} />
         </TouchableOpacity>

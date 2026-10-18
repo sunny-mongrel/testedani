@@ -1,5 +1,9 @@
 /*
- * TELA: CADASTRO (criar login).
+ * TELA: CADASTRO / LOGIN (conta via Supabase).
+ *
+ * Tem três estados: criar conta (nome, e-mail e senha), entrar (e-mail e
+ * senha) e, se já houver login, um resumo da conta com o botão Sair.
+ * A conta é criada/validada no Supabase (veja context/AppContext.tsx).
  *
  * Formulário com nome, e-mail e senha. É aberta por dois caminhos: o cartão
  * "Criar perfil / Login" da aba Ajustes e o botão de perfil (canto superior
@@ -7,9 +11,8 @@
  * em tela cheia, sem a barra inferior, e o botão de voltar no topo retorna
  * para a tela anterior.
  *
- * ATENÇÃO: a tela é apenas visual. Os campos são validados (nome preenchido,
- * e-mail com formato válido e senha com pelo menos 6 caracteres), mas nada é
- * enviado nem salvo: ainda não existe servidor nem banco de dados de usuários.
+ * Os campos são validados antes do envio (nome preenchido, e-mail com formato
+ * válido e senha com pelo menos 6 caracteres).
  *
  * O componente auxiliar Campo fica no fim deste arquivo porque só esta tela o usa.
  */
@@ -33,6 +36,7 @@ import { RootStackParamList } from '../routes/routes.types';
 import { colors, gradients, radius } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { useAppContext } from '../context/AppContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Cadastro'>;
 
@@ -40,7 +44,18 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Cadastro'>;
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TAMANHO_MINIMO_SENHA = 6;
 
-export default function Cadastro({ navigation }: Props) {
+export default function Cadastro({ navigation, route }: Props) {
+  const { usuario, cadastrar, entrar, sair } = useAppContext();
+
+  // 'cadastro' = criar conta (pede nome); 'login' = entrar em conta existente.
+  // Vindo do "Já tenho conta" das boas-vindas, já abre em "Entrar".
+  const veioDasBoasVindas = route.params?.origem === 'onboarding';
+  const [modo, setModo] = useState<'cadastro' | 'login'>(veioDasBoasVindas ? 'login' : 'cadastro');
+  const ehCadastro = modo === 'cadastro';
+
+  // Evita toques repetidos enquanto a chamada ao servidor está em andamento.
+  const [carregando, setCarregando] = useState(false);
+
   // Valores digitados em cada campo.
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -62,15 +77,54 @@ export default function Cadastro({ navigation }: Props) {
       ? `A senha precisa ter pelo menos ${TAMANHO_MINIMO_SENHA} caracteres.`
       : '';
 
-  function cadastrar() {
+  // Para onde ir depois de entrar ou cadastrar. Das boas-vindas: com pontuação
+  // salva vai direto ao app; sem pontuação segue para o questionário. De dentro
+  // do app (Home/Ajustes): só volta para a tela anterior.
+  function concluirEntrada(temPontuacao?: boolean) {
+    if (!veioDasBoasVindas) return navigation.goBack();
+    navigation.reset(
+      temPontuacao
+        ? { index: 0, routes: [{ name: 'MainApp' }] }
+        : { index: 1, routes: [{ name: 'Onboarding' }, { name: 'Questionario' }] },
+    );
+  }
+
+  async function enviar() {
     setTentou(true);
     // Se algum campo tem erro, para por aqui e deixa as mensagens visíveis.
-    if (erroNome || erroEmail || erroSenha) return;
+    // O nome só é exigido no cadastro.
+    if ((ehCadastro && erroNome) || erroEmail || erroSenha) return;
 
-    // Ainda sem servidor: só confirmamos e voltamos para a tela anterior.
-    Alert.alert('Cadastro realizado!', `Bem-vindo(a) ao Ecoara, ${nome.trim()}.`, [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    setCarregando(true);
+    try {
+      if (ehCadastro) {
+        const r = await cadastrar(nome.trim(), email.trim(), senha);
+        if (r.erro) return Alert.alert('Não foi possível cadastrar', r.erro);
+        if (r.precisaConfirmarEmail) {
+          // Ligado por padrão no Supabase: o usuário precisa clicar no link do e-mail.
+          setModo('login');
+          return Alert.alert(
+            'Confirme seu e-mail',
+            'Enviamos um link de confirmação. Depois de confirmar, volte e toque em "Entrar".',
+          );
+        }
+        Alert.alert('Cadastro realizado!', `Bem-vindo(a) ao Ecoara, ${nome.trim()}.`, [
+          { text: 'OK', onPress: () => concluirEntrada(r.temPontuacao) },
+        ]);
+      } else {
+        const r = await entrar(email.trim(), senha);
+        if (r.erro) return Alert.alert('Não foi possível entrar', r.erro);
+        concluirEntrada(r.temPontuacao);
+      }
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function fazerLogout() {
+    await sair();
+    // Sem login, o app volta ao começo: boas-vindas -> questionário.
+    navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
   }
 
   return (
@@ -97,19 +151,32 @@ export default function Cadastro({ navigation }: Props) {
               <Ionicons name="chevron-back" size={22} color={colors.white} />
             </TouchableOpacity>
 
-            <Text style={styles.titulo}>Criar cadastro</Text>
-            <Text style={styles.subtitulo}>Salve seu progresso e conquistas</Text>
+            <Text style={styles.titulo}>
+              {usuario ? 'Minha conta' : ehCadastro ? 'Criar cadastro' : 'Entrar'}
+            </Text>
+            <Text style={styles.subtitulo}>
+              {usuario ? 'Você está conectado(a)' : 'Salve seu progresso e conquistas'}
+            </Text>
 
+            {usuario ? (
+              <View style={styles.cartao}>
+                <Text style={styles.contaNome}>{usuario.nome || 'Ecoarense'}</Text>
+                <Text style={styles.contaEmail}>{usuario.email}</Text>
+                <PrimaryButton label="SAIR DA CONTA" variant="outline" onPress={fazerLogout} style={styles.botao} />
+              </View>
+            ) : (
             <View style={styles.cartao}>
-              <Campo
-                icon="person-outline"
-                label="Nome"
-                placeholder="Seu nome"
-                value={nome}
-                onChangeText={setNome}
-                autoCapitalize="words"
-                erro={tentou ? erroNome : ''}
-              />
+              {ehCadastro && (
+                <Campo
+                  icon="person-outline"
+                  label="Nome"
+                  placeholder="Seu nome"
+                  value={nome}
+                  onChangeText={setNome}
+                  autoCapitalize="words"
+                  erro={tentou ? erroNome : ''}
+                />
+              )}
               <Campo
                 icon="mail-outline"
                 label="E-mail"
@@ -139,8 +206,27 @@ export default function Cadastro({ navigation }: Props) {
                 }}
               />
 
-              <PrimaryButton label="CADASTRAR" onPress={cadastrar} style={styles.botao} />
+              <PrimaryButton
+                label={carregando ? 'AGUARDE...' : ehCadastro ? 'CADASTRAR' : 'ENTRAR'}
+                onPress={enviar}
+                disabled={carregando}
+                style={styles.botao}
+              />
+
+              {/* Alterna entre criar conta e entrar. */}
+              <TouchableOpacity
+                onPress={() => {
+                  setModo(ehCadastro ? 'login' : 'cadastro');
+                  setTentou(false);
+                }}
+                style={styles.alternar}
+              >
+                <Text style={styles.alternarTexto}>
+                  {ehCadastro ? 'Já tem conta? Entrar' : 'Não tem conta? Criar cadastro'}
+                </Text>
+              </TouchableOpacity>
             </View>
+            )}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -261,4 +347,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   botao: { marginTop: 6 },
+  alternar: { marginTop: 16, alignItems: 'center' },
+  alternarTexto: { fontFamily: fonts.sansBold, fontSize: 14, fontWeight: '700', color: colors.leafDeep },
+  contaNome: { fontFamily: fonts.display, fontSize: 20, fontWeight: '800', color: colors.leafDeep, textAlign: 'center' },
+  contaEmail: { fontFamily: fonts.sans, fontSize: 14, color: colors.mutedForeground, textAlign: 'center', marginTop: 4, marginBottom: 16 },
 });
