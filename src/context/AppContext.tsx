@@ -59,6 +59,8 @@ function traduzirErroAuth(mensagem: string): string {
   return mensagem;
 }
 
+export type PosicaoAcessorio = { x: number; y: number };
+
 /** Estrutura dos dados e funções que o contexto disponibiliza às telas. */
 type AppContextValue = {
   /** Usuário logado (null = sem login) e o nome salvo no perfil */
@@ -76,6 +78,16 @@ type AppContextValue = {
   missoesConcluidas: Record<string, boolean>;
   /** Alterna o estado de conclusão de uma missão (marca/desmarca) */
   alternarMissao: (id: string, pontos: number) => void;
+
+  /** Acessórios equipados, indexados pelo espaço que ocupam. */
+  acessoriosEquipados: Record<string, string>;
+  alternarAcessorio: (id: string, slot: string) => void;
+  limparAcessorios: () => void;
+  posicoesAcessorios: Record<string, PosicaoAcessorio>;
+  definirPosicaoAcessorio: (id: string, posicao: PosicaoAcessorio) => void;
+  redefinirPosicoesAcessorios: () => void;
+  escalasAcessorios: Record<string, number>;
+  definirEscalaAcessorio: (id: string, escala: number) => void;
 
   pontosDeImpacto: number;  // Soma total de pontos das missões concluídas
   nivel: number;            // Nível (1 a 20) calculado a partir da pontuação total
@@ -113,6 +125,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Guardar os pontos junto com o id permite somar tudo sem consultar a lista
   // de missões de novo
   const [pontosPorMissao, setPontosPorMissao] = useState<Record<string, number>>({});
+  const [acessoriosEquipados, setAcessoriosEquipados] = useState<Record<string, string>>({});
+  const [posicoesAcessorios, setPosicoesAcessorios] = useState<Record<string, PosicaoAcessorio>>({});
+  const [escalasAcessorios, setEscalasAcessorios] = useState<Record<string, number>>({});
 
   // Cópias sempre atualizadas do resultado e das missões, para ler dentro de
   // funções assíncronas sem pegar um valor antigo.
@@ -278,6 +293,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function alternarAcessorio(id: string, slot: string) {
+    setAcessoriosEquipados((atual) => {
+      const proximo = { ...atual };
+      if (proximo[slot] === id) {
+        delete proximo[slot];
+      } else {
+        proximo[slot] = id;
+      }
+      return proximo;
+    });
+  }
+
+  function limparAcessorios() {
+    setAcessoriosEquipados({});
+  }
+
+  function definirPosicaoAcessorio(id: string, posicao: PosicaoAcessorio) {
+    setPosicoesAcessorios((atuais) => ({ ...atuais, [id]: posicao }));
+  }
+
+  function redefinirPosicoesAcessorios() {
+    setPosicoesAcessorios({});
+  }
+
+  function definirEscalaAcessorio(id: string, escala: number) {
+    setEscalasAcessorios((atuais) => ({ ...atuais, [id]: escala }));
+  }
+
   // Calcula a soma total dos pontos de impacto do usuário
   const pontosDeImpacto = useMemo(
     () => Object.values(pontosPorMissao).reduce((total, p) => total + p, 0),
@@ -308,6 +351,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     definirResultado,
     missoesConcluidas,
     alternarMissao,
+    acessoriosEquipados,
+    alternarAcessorio,
+    limparAcessorios,
+    posicoesAcessorios,
+    definirPosicaoAcessorio,
+    redefinirPosicoesAcessorios,
+    escalasAcessorios,
+    definirEscalaAcessorio,
     pontosDeImpacto,
     nivel,
     progressoNivel,
